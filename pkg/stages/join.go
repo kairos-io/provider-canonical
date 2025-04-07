@@ -1,0 +1,65 @@
+package stages
+
+import (
+	"fmt"
+	"github.com/kairos-io/provider-canonical/pkg/fs"
+	"gopkg.in/yaml.v3"
+	"path/filepath"
+
+	apiv1 "github.com/canonical/k8s-snap-api/api/v1"
+	"github.com/kairos-io/provider-canonical/pkg/domain"
+	"github.com/kairos-io/provider-canonical/pkg/utils"
+	yip "github.com/mudler/yip/pkg/schema"
+)
+
+func GetControlPlaneJoinStage(clusterCtx *domain.ClusterContext) []yip.Stage {
+	var stages []yip.Stage
+	var canonicalConfig apiv1.ControlPlaneJoinConfig
+	_ = yaml.Unmarshal([]byte(clusterCtx.UserOptions), &canonicalConfig)
+
+	canonicalConfig.ExtraSANS = appendIfNotPresent(canonicalConfig.ExtraSANS, clusterCtx.ControlPlaneHost)
+	config, _ := yaml.Marshal(canonicalConfig)
+
+	stages = append(stages,
+		getJoinConfigFileStage(string(config)),
+		getJoinStage(clusterCtx.ClusterToken))
+
+	if dirExists(fs.OSFS, domain.KubeComponentsArgsPath) {
+		stages = append(stages, getControlPlaneReconfigureStage(canonicalConfig)...)
+	}
+	if certStage := getCertRegenerateStage(canonicalConfig.ExtraSANS); certStage != nil {
+		stages = append(stages, *certStage)
+	}
+	return stages
+}
+
+func GetWorkerJoinStage(clusterCtx *domain.ClusterContext) []yip.Stage {
+	var stages []yip.Stage
+	var canonicalConfig apiv1.WorkerJoinConfig
+	_ = yaml.Unmarshal([]byte(clusterCtx.UserOptions), &canonicalConfig)
+
+	config, _ := yaml.Marshal(canonicalConfig)
+
+	stages = append(stages,
+		getJoinConfigFileStage(string(config)),
+		getJoinStage(clusterCtx.ClusterToken))
+
+	if dirExists(fs.OSFS, domain.KubeComponentsArgsPath) {
+		stages = append(stages, getWorkerReconfigureStage(canonicalConfig)...)
+	}
+	return stages
+}
+
+func getJoinConfigFileStage(bootstrapConfig string) yip.Stage {
+	return utils.GetFileStage("Generate Join Config", "/opt/canonical/join-config.yaml", bootstrapConfig, 0640)
+}
+
+func getJoinStage(token string) yip.Stage {
+	return yip.Stage{
+		Name: "Run Canonical Join",
+		If:   fmt.Sprintf("[ ! -f %s ]", "/opt/canonical/canonical.join"),
+		Commands: []string{
+			fmt.Sprintf("bash %s %s", filepath.Join(domain.CanonicalScriptDir, "join.sh"), token),
+		},
+	}
+}
