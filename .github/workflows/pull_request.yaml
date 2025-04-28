@@ -1,0 +1,47 @@
+name: Pull Request
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@master
+        with:
+          platforms: all
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@master
+      - uses: earthly/actions-setup@v1
+        with:
+          version: "latest"
+      - run: earthly --ci +lint
+  build-provider-package:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@master
+        with:
+          platforms: all
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@master
+      - uses: earthly/actions-setup@v1
+        with:
+          version: "latest"
+      - uses: earthly/actions-setup@v1
+        with:
+          version: "v0.6.30"
+      - run: earthly --ci --output +build-provider-package
