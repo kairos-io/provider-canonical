@@ -27,9 +27,7 @@ func GetCertSans(certPath string) ([]string, error) {
 		return nil, errors.New("tls: failed to parse certificate: " + err.Error())
 	}
 
-	for _, dns := range cert.DNSNames {
-		sans = append(sans, dns)
-	}
+	sans = append(sans, cert.DNSNames...)
 
 	for _, ip := range cert.IPAddresses {
 		sans = append(sans, ip.String())
