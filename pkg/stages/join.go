@@ -22,7 +22,7 @@ func GetControlPlaneJoinStage(clusterCtx *domain.ClusterContext) []yip.Stage {
 
 	stages = append(stages,
 		getJoinConfigFileStage(string(config)),
-		getJoinStage(clusterCtx.ClusterToken))
+		getJoinStage(clusterCtx.ClusterToken, clusterCtx.CustomAdvertiseAddress))
 
 	if dirExists(fs.OSFS, domain.KubeComponentsArgsPath) {
 		stages = append(stages, getControlPlaneReconfigureStage(canonicalConfig)...)
@@ -42,7 +42,7 @@ func GetWorkerJoinStage(clusterCtx *domain.ClusterContext) []yip.Stage {
 
 	stages = append(stages,
 		getJoinConfigFileStage(string(config)),
-		getJoinStage(clusterCtx.ClusterToken))
+		getJoinStage(clusterCtx.ClusterToken, clusterCtx.CustomAdvertiseAddress))
 
 	if dirExists(fs.OSFS, domain.KubeComponentsArgsPath) {
 		stages = append(stages, getWorkerReconfigureStage(canonicalConfig)...)
@@ -54,12 +54,12 @@ func getJoinConfigFileStage(bootstrapConfig string) yip.Stage {
 	return utils.GetFileStage("Generate Join Config", "/opt/canonical/join-config.yaml", bootstrapConfig, 0640)
 }
 
-func getJoinStage(token string) yip.Stage {
+func getJoinStage(token, advertiseAddress string) yip.Stage {
 	return yip.Stage{
 		Name: "Run Canonical Join",
 		If:   fmt.Sprintf("[ ! -f %s ]", "/opt/canonical/canonical.join"),
 		Commands: []string{
-			fmt.Sprintf("bash %s %s", filepath.Join(domain.CanonicalScriptDir, "join.sh"), token),
+			fmt.Sprintf("bash %s %s %s", filepath.Join(domain.CanonicalScriptDir, "join.sh"), token, advertiseAddress),
 		},
 	}
 }

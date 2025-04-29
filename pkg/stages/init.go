@@ -26,7 +26,7 @@ func GetInitStage(clusterCtx *domain.ClusterContext) []yip.Stage {
 
 	stages = append(stages,
 		getConfigFileStage(string(config)),
-		getBootstrapStage())
+		getBootstrapStage(clusterCtx.CustomAdvertiseAddress))
 
 	if dirExists(fs.OSFS, domain.KubeComponentsArgsPath) {
 		stages = append(stages, getBootstrapReconfigureStage(canonicalConfig)...)
@@ -42,12 +42,12 @@ func getConfigFileStage(bootstrapConfig string) yip.Stage {
 	return utils.GetFileStage("Generate Bootstrap Config", "/opt/canonical/bootstrap-config.yaml", bootstrapConfig, 0640)
 }
 
-func getBootstrapStage() yip.Stage {
+func getBootstrapStage(advertiseAddress string) yip.Stage {
 	return yip.Stage{
 		Name: "Run Canonical Bootstrap",
 		If:   fmt.Sprintf("[ ! -f %s ]", "/opt/canonical/canonical.bootstrap"),
 		Commands: []string{
-			fmt.Sprintf("bash %s", filepath.Join(domain.CanonicalScriptDir, "bootstrap.sh")),
+			fmt.Sprintf("bash %s %s", filepath.Join(domain.CanonicalScriptDir, "bootstrap.sh"), advertiseAddress),
 		},
 	}
 }
