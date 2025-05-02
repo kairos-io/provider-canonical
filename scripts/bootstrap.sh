@@ -8,6 +8,7 @@ export BASH_XTRACEFD="19"
 set -ex
 
 cd /opt/canonical-k8s
+snap ack snapd.assert && sudo snap install ./snapd.snap
 snap ack core20.assert && sudo snap install ./core20.snap --classic
 snap ack k8s.assert && sudo snap install ./k8s.snap --classic
 
