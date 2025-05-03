@@ -10,6 +10,7 @@ set -ex
 token=$1
 
 cd /opt/canonical-k8s
+snap ack snapd.assert && sudo snap install ./snapd.snap
 snap ack core20.assert && sudo snap install ./core20.snap
 snap ack k8s.assert && sudo snap install ./k8s.snap --classic
 
