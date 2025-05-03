@@ -31,6 +31,13 @@ func CreateClusterContext(cluster clusterplugin.Cluster) *domain.ClusterContext 
 		UserOptions:      cluster.Options,
 		ClusterToken:     cluster.ClusterToken,
 	}
+
+	if address, ok := cluster.ProviderOptions["advertise_address"]; ok && address != "" {
+		clusterContext.CustomAdvertiseAddress = address
+	} else {
+		clusterContext.CustomAdvertiseAddress = "''"
+	}
+
 	return clusterContext
 }
 
