@@ -22,13 +22,17 @@ else
   bootstrap_cmd="k8s bootstrap --file /opt/canonical/bootstrap-config.yaml"
 fi
 
-until $bootstrap_cmd > /dev/null
+until eval "$bootstrap_cmd" > /dev/null
 do
   echo "retrying in 10s"
   sleep 10;
 done
 
-k8s status --wait-ready
+until k8s status --wait-ready
+do
+  echo "waiting for status"
+  sleep 10
+done
 
 snap refresh k8s --hold
 
