@@ -27,8 +27,8 @@ func GetControlPlaneJoinStage(clusterCtx *domain.ClusterContext) []yip.Stage {
 	if dirExists(fs.OSFS, domain.KubeComponentsArgsPath) {
 		stages = append(stages, getControlPlaneReconfigureStage(canonicalConfig)...)
 	}
-	if certStage := getCertRegenerateStage(canonicalConfig.ExtraSANS); certStage != nil {
-		stages = append(stages, *certStage)
+	if certStage := getApiserverCertRegenerateStage(canonicalConfig.ExtraSANS); certStage != nil {
+		stages = append(stages, *certStage...)
 	}
 	return stages
 }

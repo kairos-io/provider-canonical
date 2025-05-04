@@ -31,8 +31,9 @@ func GetInitStage(clusterCtx *domain.ClusterContext) []yip.Stage {
 	if dirExists(fs.OSFS, domain.KubeComponentsArgsPath) {
 		stages = append(stages, getBootstrapReconfigureStage(canonicalConfig)...)
 	}
-	if certStage := getCertRegenerateStage(canonicalConfig.ExtraSANs); certStage != nil {
-		stages = append(stages, *certStage)
+
+	if certStage := getApiserverCertRegenerateStage(canonicalConfig.ExtraSANs); certStage != nil {
+		stages = append(stages, *certStage...)
 	}
 
 	return stages
