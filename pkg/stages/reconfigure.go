@@ -2,14 +2,15 @@ package stages
 
 import (
 	"bufio"
+	"crypto/x509/pkix"
 	"fmt"
 	"maps"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/kairos-io/provider-canonical/pkg/utils"
-
 	"github.com/sirupsen/logrus"
 	"github.com/twpayne/go-vfs/v4"
 
@@ -119,41 +120,102 @@ func getWorkerReconfigureServiceRestartStage() yip.Stage {
 	}
 }
 
-func getCertRegenerateStage(incomingSans []string) *yip.Stage {
+func getApiserverCertRegenerateStage(incomingSans []string) *[]yip.Stage {
 	if len(incomingSans) == 0 {
 		return nil
 	}
-
 	apiserverCertPath := filepath.Join(domain.KubeCertificateDirPath, "apiserver.crt")
 	if !utils.FileExists(fs.OSFS, apiserverCertPath) {
 		return nil
 	}
-
-	existingSans, err := utils.GetCertSans(apiserverCertPath)
+	allExistingSans, err := utils.GetAllSans(apiserverCertPath)
 	if err != nil {
-		logrus.Fatalf("failed to get cert sans: %v", err)
+		logrus.Fatalf("failed to get all cert sans: %v", err)
 	}
-	if containsAnyNonMatch(incomingSans, existingSans) {
-		cmd := fmt.Sprintf("k8s refresh-certs --expires-in 20y %s", generateExtraSANSString(incomingSans))
-		return &yip.Stage{
-			Name:     "Regenerate Certificates",
-			Commands: []string{cmd},
+
+	if containsAnyNonMatch(incomingSans, allExistingSans) {
+		return &[]yip.Stage{
+			getApiserverCertFileStage(incomingSans, apiserverCertPath),
+			getApiserverServiceRestartStage(),
 		}
 	}
 	return nil
 }
 
-func generateExtraSANSString(sans []string) string {
-	var result strings.Builder
+func getApiserverCertFileStage(incomingSans []string, apiserverCertPath string) yip.Stage {
+	dnsSANs, ipSANs := utils.SplitIPAndDNSSANs(incomingSans)
 
-	for i, san := range sans {
-		if i > 0 {
-			result.WriteString(" ")
-		}
-		result.WriteString("--extra-sans ")
-		result.WriteString(san)
+	existingDnsSans, existingIpSans, err := utils.GetExistingIpAndDnsSans(apiserverCertPath)
+	if err != nil {
+		logrus.Fatalf("failed to get cert sans: %v", err)
 	}
-	return result.String()
+
+	notBefore := time.Now()
+	template, err := utils.GenerateCertificate(
+		pkix.Name{CommonName: "kube-apiserver"},
+		notBefore,
+		notBefore.AddDate(20, 0, 0),
+		false,
+		append(existingDnsSans, dnsSANs...), append(existingIpSans, ipSANs...))
+	if err != nil {
+		logrus.Fatalf("failed to generate certificate template: %v", err)
+	}
+
+	caCert, caKey, err := getRootCaAndKey()
+	if err != nil {
+		logrus.Fatalf("failed to get CA cert and key: %v", err)
+	}
+
+	serverCACert, serverCAKey, err := utils.LoadCertificate(caCert, caKey)
+	if err != nil {
+		logrus.Fatalf("failed to load CA cert and key: %v", err)
+	}
+
+	cert, key, err := utils.SignCertificate(template, 2048, serverCACert, &serverCAKey.PublicKey, serverCAKey)
+	if err != nil {
+		logrus.Fatalf("failed to sign certificate: %v", err)
+	}
+
+	return yip.Stage{
+		Name: "Regenerate Apiserver Certificates",
+		Files: []yip.File{
+			{
+				Path:        filepath.Join(domain.KubeCertificateDirPath, "apiserver.crt"),
+				Permissions: 0600,
+				Content:     cert,
+			},
+			{
+				Path:        filepath.Join(domain.KubeCertificateDirPath, "apiserver.key"),
+				Permissions: 0600,
+				Content:     key,
+			},
+		},
+	}
+}
+
+func getApiserverServiceRestartStage() yip.Stage {
+	return yip.Stage{
+		Name: "Restart Kube Components Services",
+		Commands: []string{
+			"systemctl daemon-reload",
+			"systemctl restart snap.k8s.kube-apiserver.service",
+			"systemctl restart snap.k8s.kubelet.service",
+		},
+	}
+}
+
+func getRootCaAndKey() (string, string, error) {
+	certBytes, err := fs.OSFS.ReadFile(filepath.Join(domain.KubeCertificateDirPath, "ca.crt"))
+	if err != nil {
+		return "", "", err
+	}
+
+	keyBytes, err := fs.OSFS.ReadFile(filepath.Join(domain.KubeCertificateDirPath, "ca.key"))
+	if err != nil {
+		return "", "", err
+	}
+
+	return string(certBytes), string(keyBytes), nil
 }
 
 func getApiserverArgs(updatedArgs map[string]*string) string {
