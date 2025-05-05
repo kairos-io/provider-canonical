@@ -2,13 +2,9 @@
 
 set -x
 
-do_dqlite_cleanup=$1
-
 node_name=$(cat /etc/hostname)
 
-if [ "$do_dqlite_cleanup" = true ]; then
-  k8s remove-node "$node_name" --force
-fi
+k8s remove-node "$node_name" --force
 
 snap remove k8s --purge
 snap remove core20 --purge
@@ -19,4 +15,8 @@ rm -rf /opt/containerd
 rm -rf /opt/*init
 rm -rf /opt/*join
 
-rm -rf /etc/kubernetes
+rm -rf /etc/kubernetes/*
+
+rm -rf /var/log/provider-canonical.log
+rm -rf /var/log/canonical*.log
+rm -rf /var/log/pods

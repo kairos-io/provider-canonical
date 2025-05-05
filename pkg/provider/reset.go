@@ -3,14 +3,14 @@ package provider
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/kairos-io/provider-canonical/pkg/domain"
-	"github.com/mudler/go-pluggable"
-	"github.com/sirupsen/logrus"
 	"os/exec"
 	"path/filepath"
 
 	"github.com/kairos-io/kairos-sdk/bus"
 	"github.com/kairos-io/kairos-sdk/clusterplugin"
+	"github.com/kairos-io/provider-canonical/pkg/domain"
+	"github.com/mudler/go-pluggable"
+	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 )
 
@@ -39,12 +39,7 @@ func HandleClusterReset(event *pluggable.Event) pluggable.EventResponse {
 		return response
 	}
 
-	doDqliteCleanup, ok := config.Cluster.ProviderOptions["do_dqlite_cleanup"]
-	if !ok {
-		doDqliteCleanup = "true"
-	}
-
-	cmd := exec.Command("/bin/sh", "-c", filepath.Join(domain.CanonicalScriptDir, "reset.sh"), doDqliteCleanup)
+	cmd := exec.Command("/bin/sh", "-c", filepath.Join(domain.CanonicalScriptDir, "reset.sh"))
 	output, _ := cmd.CombinedOutput()
 
 	logrus.Println("reset node script output: ", string(output))
