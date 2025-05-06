@@ -5,5 +5,6 @@ const (
 	KubeComponentsArgsPath = "/var/snap/k8s/common/args"
 	KubeCertificateDirPath = "/etc/kubernetes/pki"
 
-	CanonicalScriptDir = "/opt/canonical/scripts"
+	CanonicalScriptDir    = "/opt/canonical/scripts"
+	DefaultLocalImagesDir = "/opt/canonical/images"
 )
