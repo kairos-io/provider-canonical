@@ -2,12 +2,11 @@ package provider
 
 import (
 	apiv1 "github.com/canonical/k8s-snap-api/api/v1"
+	"github.com/kairos-io/kairos-sdk/clusterplugin"
 	"github.com/kairos-io/provider-canonical/pkg/domain"
 	"github.com/kairos-io/provider-canonical/pkg/stages"
-	"gopkg.in/yaml.v3"
-
-	"github.com/kairos-io/kairos-sdk/clusterplugin"
 	yip "github.com/mudler/yip/pkg/schema"
+	"gopkg.in/yaml.v3"
 )
 
 func ClusterProvider(cluster clusterplugin.Cluster) yip.YipConfig {
@@ -36,6 +35,12 @@ func CreateClusterContext(cluster clusterplugin.Cluster) *domain.ClusterContext 
 		clusterContext.CustomAdvertiseAddress = address
 	} else {
 		clusterContext.CustomAdvertiseAddress = "''"
+	}
+
+	if cluster.LocalImagesPath == "" {
+		clusterContext.LocalImagesPath = domain.DefaultLocalImagesDir
+	} else {
+		clusterContext.LocalImagesPath = cluster.LocalImagesPath
 	}
 
 	return clusterContext
