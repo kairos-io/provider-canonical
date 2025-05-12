@@ -11,6 +11,8 @@ token=$1
 advertise_address=$2
 node_role=$3
 
+snap wait system seed.loaded
+
 cd /opt/canonical-k8s
 snap ack snapd.assert && sudo snap install ./snapd.snap
 snap ack core20.assert && sudo snap install ./core20.snap
