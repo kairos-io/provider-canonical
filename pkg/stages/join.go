@@ -3,8 +3,9 @@ package stages
 import (
 	"fmt"
 
-	"gopkg.in/yaml.v3"
 	"path/filepath"
+
+	"gopkg.in/yaml.v3"
 
 	apiv1 "github.com/canonical/k8s-snap-api/api/v1"
 	"github.com/kairos-io/provider-canonical/pkg/domain"
@@ -18,7 +19,15 @@ func GetControlPlaneJoinStage(clusterCtx *domain.ClusterContext) []yip.Stage {
 	var canonicalConfig apiv1.ControlPlaneJoinConfig
 	_ = yaml.Unmarshal([]byte(clusterCtx.UserOptions), &canonicalConfig)
 
+	var bootstrapConfig apiv1.BootstrapConfig
+	_ = yaml.Unmarshal([]byte(clusterCtx.UserOptions), &bootstrapConfig)
+
+	allocateNodeCidrs := "true"
+
 	canonicalConfig.ExtraSANS = appendIfNotPresent(canonicalConfig.ExtraSANS, clusterCtx.ControlPlaneHost)
+	canonicalConfig.ExtraNodeKubeControllerManagerArgs["--allocate-node-cidrs"] = &allocateNodeCidrs
+	canonicalConfig.ExtraNodeKubeControllerManagerArgs["--cluster-cidr"] = bootstrapConfig.PodCIDR
+
 	config, _ := yaml.Marshal(canonicalConfig)
 
 	stages = append(stages,

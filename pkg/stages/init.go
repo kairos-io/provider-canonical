@@ -2,6 +2,8 @@ package stages
 
 import (
 	"fmt"
+	"path/filepath"
+
 	apiv1 "github.com/canonical/k8s-snap-api/api/v1"
 	"github.com/kairos-io/provider-canonical/pkg/domain"
 	"github.com/kairos-io/provider-canonical/pkg/fs"
@@ -9,7 +11,6 @@ import (
 	yip "github.com/mudler/yip/pkg/schema"
 	"github.com/twpayne/go-vfs/v4"
 	"gopkg.in/yaml.v3"
-	"path/filepath"
 )
 
 func GetInitStage(clusterCtx *domain.ClusterContext) []yip.Stage {
@@ -20,7 +21,11 @@ func GetInitStage(clusterCtx *domain.ClusterContext) []yip.Stage {
 	canonicalConfig.ExtraSANs = appendIfNotPresent(canonicalConfig.ExtraSANs, clusterCtx.ControlPlaneHost)
 
 	enableDns := true
+	allocateNodeCidrs := "true"
+
 	canonicalConfig.ClusterConfig.DNS.Enabled = &enableDns
+	canonicalConfig.ExtraNodeKubeControllerManagerArgs["--allocate-node-cidrs"] = &allocateNodeCidrs
+	canonicalConfig.ExtraNodeKubeControllerManagerArgs["--cluster-cidr"] = canonicalConfig.PodCIDR
 
 	config, _ := yaml.Marshal(canonicalConfig)
 
