@@ -19,7 +19,7 @@ snap ack k8s.assert && sudo snap install ./k8s.snap --classic
 bootstrap_cmd=''
 
 if [ -n "$advertise_address" ]; then
-  bootstrap_cmd="k8s bootstrap --file /opt/canonical/bootstrap-config.yaml --advertise-address $advertise_address"
+  bootstrap_cmd="k8s bootstrap --file /opt/canonical/bootstrap-config.yaml --address $advertise_address"
 else
   bootstrap_cmd="k8s bootstrap --file /opt/canonical/bootstrap-config.yaml"
 fi
