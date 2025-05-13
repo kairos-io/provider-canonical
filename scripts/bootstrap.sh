@@ -9,6 +9,8 @@ set -ex
 
 advertise_address=$1
 
+snap wait system seed.loaded
+
 cd /opt/canonical-k8s
 snap ack snapd.assert && sudo snap install ./snapd.snap
 snap ack core20.assert && sudo snap install ./core20.snap --classic
