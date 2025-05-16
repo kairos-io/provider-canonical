@@ -1,6 +1,8 @@
 package provider
 
 import (
+	"strings"
+
 	apiv1 "github.com/canonical/k8s-snap-api/api/v1"
 	"github.com/kairos-io/kairos-sdk/clusterplugin"
 	"github.com/kairos-io/provider-canonical/pkg/domain"
@@ -28,7 +30,7 @@ func CreateClusterContext(cluster clusterplugin.Cluster) *domain.ClusterContext 
 		EnvConfig:        cluster.Env,
 		ControlPlaneHost: cluster.ControlPlaneHost,
 		UserOptions:      cluster.Options,
-		ClusterToken:     cluster.ClusterToken,
+		ClusterToken:     strings.TrimSuffix(cluster.ClusterToken, "\n"),
 	}
 
 	if address, ok := cluster.ProviderOptions["advertise_address"]; ok && address != "" {
