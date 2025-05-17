@@ -4,7 +4,9 @@ set -x
 
 node_name=$(cat /etc/hostname)
 
-k8s remove-node "$node_name" --force
+k8s remove-node "$node_name"
+
+sleep 10
 
 snap remove k8s --purge
 snap remove core20 --purge
