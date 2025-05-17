@@ -43,3 +43,9 @@ fi
 snap refresh k8s --hold
 
 touch /opt/canonical/canonical.join
+
+if [ "$node_role" != "worker" ]; then
+  sleep 10
+  node_name=$(cat /etc/hostname)
+  k8s kubectl label node "$node_name" node-role.kubernetes.io/control-plane=true --overwrite > /dev/null
+fi
