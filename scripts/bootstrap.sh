@@ -39,7 +39,3 @@ done
 snap refresh k8s --hold
 
 touch /opt/canonical/canonical.bootstrap
-
-sleep 10
-node_name=$(cat /etc/hostname)
-k8s kubectl label node "$node_name" node-role.kubernetes.io/control-plane=true --overwrite > /dev/null
