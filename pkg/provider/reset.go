@@ -39,9 +39,9 @@ func HandleClusterReset(event *pluggable.Event) pluggable.EventResponse {
 		return response
 	}
 
-	cmd := exec.Command("/bin/sh", "-c", filepath.Join(domain.CanonicalScriptDir, "reset.sh"))
+	cmd := exec.Command(filepath.Join(domain.CanonicalScriptDir, "reset.sh"), string(config.Cluster.Role))
 	output, _ := cmd.CombinedOutput()
 
-	logrus.Println("reset node script output: ", string(output))
+	logrus.Info("reset node script output: ", string(output))
 	return response
 }

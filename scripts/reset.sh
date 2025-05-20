@@ -2,9 +2,12 @@
 
 set -x
 
+node_role=$1
 node_name=$(cat /etc/hostname)
 
-k8s remove-node "$node_name"
+if [ "$node_role" != "worker" ]; then
+  k8s remove-node "$node_name"
+fi
 
 sleep 10
 
