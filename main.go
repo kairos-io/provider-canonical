@@ -5,6 +5,7 @@ import (
 
 	"github.com/kairos-io/provider-canonical/pkg/log"
 
+	"github.com/kairos-io/kairos-sdk/bus"
 	"github.com/kairos-io/kairos-sdk/clusterplugin"
 	"github.com/mudler/go-pluggable"
 	"github.com/sirupsen/logrus"
@@ -19,7 +20,7 @@ func main() {
 
 	if err := plugin.Run(
 		pluggable.FactoryPlugin{
-			EventType:     clusterplugin.EventClusterReset,
+			EventType:     bus.EventAfterReset,
 			PluginHandler: provider.HandleClusterReset,
 		},
 	); err != nil {
