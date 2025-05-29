@@ -2,10 +2,12 @@ package stages
 
 import (
 	"fmt"
+	"path/filepath"
+
 	"github.com/kairos-io/provider-canonical/pkg/domain"
 	"github.com/kairos-io/provider-canonical/pkg/fs"
+	"github.com/kairos-io/provider-canonical/pkg/utils"
 	yip "github.com/mudler/yip/pkg/schema"
-	"path/filepath"
 )
 
 func GetPreSetupStages(clusterCtx *domain.ClusterContext) []yip.Stage {
@@ -14,7 +16,7 @@ func GetPreSetupStages(clusterCtx *domain.ClusterContext) []yip.Stage {
 		stages = append(stages, *proxyStage)
 	}
 	stages = append(stages, getPreCommandStages())
-	if dirExists(fs.OSFS, clusterCtx.LocalImagesPath) {
+	if utils.DirExists(fs.OSFS, clusterCtx.LocalImagesPath) {
 		stages = append(stages, getPreImportLocalImageStage(clusterCtx.LocalImagesPath))
 	}
 	return stages
