@@ -13,7 +13,7 @@ snap wait system seed.loaded
 
 cd /opt/canonical-k8s
 snap ack snapd.assert && sudo snap install ./snapd.snap
-snap ack core20.assert && sudo snap install ./core20.snap --classic
+snap ack core.assert && sudo snap install ./core.snap --classic
 snap ack k8s.assert && sudo snap install ./k8s.snap --classic
 
 bootstrap_cmd=''

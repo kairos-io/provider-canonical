@@ -25,6 +25,11 @@ jobs:
         with:
           version: "latest"
       - run: earthly --ci +lint
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: go test ./...
   build-provider-package:
     runs-on: ubuntu-latest
     permissions:

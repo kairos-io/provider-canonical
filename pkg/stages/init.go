@@ -9,7 +9,6 @@ import (
 	"github.com/kairos-io/provider-canonical/pkg/fs"
 	"github.com/kairos-io/provider-canonical/pkg/utils"
 	yip "github.com/mudler/yip/pkg/schema"
-	"github.com/twpayne/go-vfs/v4"
 	"gopkg.in/yaml.v3"
 )
 
@@ -31,9 +30,10 @@ func GetInitStage(clusterCtx *domain.ClusterContext) []yip.Stage {
 
 	stages = append(stages,
 		getConfigFileStage(string(config)),
-		getBootstrapStage(clusterCtx.CustomAdvertiseAddress))
+		getBootstrapStage(clusterCtx.CustomAdvertiseAddress),
+		getUpgradeStage(clusterCtx))
 
-	if dirExists(fs.OSFS, domain.KubeComponentsArgsPath) {
+	if utils.DirExists(fs.OSFS, domain.KubeComponentsArgsPath) {
 		stages = append(stages, getBootstrapReconfigureStage(canonicalConfig)...)
 	}
 
@@ -56,11 +56,6 @@ func getBootstrapStage(advertiseAddress string) yip.Stage {
 			fmt.Sprintf("bash %s %s", filepath.Join(domain.CanonicalScriptDir, "bootstrap.sh"), advertiseAddress),
 		},
 	}
-}
-
-func dirExists(fs vfs.FS, path string) bool {
-	info, err := fs.Stat(path)
-	return err == nil && info.IsDir()
 }
 
 func appendIfNotPresent(slice []string, element string) []string {
