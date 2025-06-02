@@ -13,7 +13,7 @@ current_node_name=$(cat /etc/hostname)
 current_installed_revision=$(snap list k8s | grep k8s | awk '{print $3}')
 echo "current k8s revision: $current_installed_revision"
 
-upcoming_revision=$(cat /opt/canonical-k8s/.k8s_revision)
+upcoming_revision=$(cat /opt/canonical-k8s/k8s_revision)
 if [ "$current_installed_revision" = "$upcoming_revision" ]; then
     echo "k8s is already up to date"
     exit 0
@@ -48,7 +48,7 @@ do_upgrade() {
     fi
 
     cd /opt/canonical-k8s
-    snap ack core.assert && sudo snap install ./core.snap
+    snap ack core.assert && sudo snap install ./core.snap --classic
     snap ack k8s.assert && sudo snap install ./k8s.snap --classic
 
     if [ "$node_role" != "worker" ]; then
