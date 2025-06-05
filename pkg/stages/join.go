@@ -32,9 +32,10 @@ func GetControlPlaneJoinStage(clusterCtx *domain.ClusterContext) []yip.Stage {
 
 	stages = append(stages,
 		getJoinConfigFileStage(string(config)),
-		getJoinStage(clusterCtx))
+		getJoinStage(clusterCtx),
+		getUpgradeStage(clusterCtx))
 
-	if dirExists(fs.OSFS, domain.KubeComponentsArgsPath) {
+	if utils.DirExists(fs.OSFS, domain.KubeComponentsArgsPath) {
 		stages = append(stages, getControlPlaneReconfigureStage(canonicalConfig)...)
 	}
 	if certStage := getApiserverCertRegenerateStage(canonicalConfig.ExtraSANS); certStage != nil {
@@ -52,9 +53,10 @@ func GetWorkerJoinStage(clusterCtx *domain.ClusterContext) []yip.Stage {
 
 	stages = append(stages,
 		getJoinConfigFileStage(string(config)),
-		getJoinStage(clusterCtx))
+		getJoinStage(clusterCtx),
+		getUpgradeStage(clusterCtx))
 
-	if dirExists(fs.OSFS, domain.KubeComponentsArgsPath) {
+	if utils.DirExists(fs.OSFS, domain.KubeComponentsArgsPath) {
 		stages = append(stages, getWorkerReconfigureStage(canonicalConfig)...)
 	}
 	return stages

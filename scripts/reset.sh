@@ -12,7 +12,9 @@ fi
 sleep 10
 
 snap remove k8s --purge
-snap remove core20 --purge
+
+# remove all core snaps
+snap list | awk '/^core[0-9]+/ {print $1}' | xargs -n1 snap remove --purge
 
 rm -rf /opt/canonical
 rm -rf /opt/canonical-k8s

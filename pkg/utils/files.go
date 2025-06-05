@@ -6,3 +6,8 @@ func FileExists(fs vfs.FS, path string) bool {
 	info, err := fs.Stat(path)
 	return err == nil && !info.IsDir()
 }
+
+func DirExists(fs vfs.FS, path string) bool {
+	info, err := fs.Stat(path)
+	return err == nil && info.IsDir()
+}
