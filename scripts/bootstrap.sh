@@ -11,10 +11,14 @@ advertise_address=$1
 
 snap wait system seed.loaded
 
+snapd_revision=$(cat /opt/canonical/snapd.revision)
+core_revision=$(cat /opt/canonical/core.revision)
+k8s_revision=$(cat /opt/canonical/k8s.revision)
+
 cd /opt/canonical-k8s
-snap ack snapd.assert && sudo snap install ./snapd.snap
-snap ack core.assert && sudo snap install ./core.snap --classic
-snap ack k8s.assert && sudo snap install ./k8s.snap --classic
+snap ack snapd_"${snapd_revision}".assert && sudo snap install ./snapd_"${snapd_revision}".snap
+snap ack core*_"${core_revision}".assert && sudo snap install ./core*_"${core_revision}".snap --classic
+snap ack k8s_"${k8s_revision}".assert && sudo snap install ./k8s_"${k8s_revision}".snap --classic
 
 bootstrap_cmd=''
 
