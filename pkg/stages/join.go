@@ -1,6 +1,7 @@
 package stages
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"path/filepath"
@@ -12,12 +13,16 @@ import (
 	"github.com/kairos-io/provider-canonical/pkg/fs"
 	"github.com/kairos-io/provider-canonical/pkg/utils"
 	yip "github.com/mudler/yip/pkg/schema"
+	"github.com/sirupsen/logrus"
 )
 
 func GetControlPlaneJoinStage(clusterCtx *domain.ClusterContext) []yip.Stage {
 	var stages []yip.Stage
 	var canonicalConfig apiv1.ControlPlaneJoinConfig
 	_ = yaml.Unmarshal([]byte(clusterCtx.UserOptions), &canonicalConfig)
+
+	data, _ := json.Marshal(canonicalConfig)
+	logrus.Println("recevied canonical data ", string(data))
 
 	var bootstrapConfig apiv1.BootstrapConfig
 	_ = yaml.Unmarshal([]byte(clusterCtx.UserOptions), &bootstrapConfig)
