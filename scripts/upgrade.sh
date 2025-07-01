@@ -58,14 +58,6 @@ do_upgrade() {
     snap ack core*_"${core_revision}".assert && sudo snap install ./core*_"${core_revision}".snap --classic
     snap ack k8s_"${k8s_revision}".assert && sudo snap install ./k8s_"${k8s_revision}".snap --classic
 
-    if [ "$node_role" != "worker" ]; then
-        until k8s status --wait-ready
-        do
-            echo "waiting for status"
-            sleep 10
-        done
-    fi
-
     snap refresh k8s --hold
 
     delete_lock_config_map
