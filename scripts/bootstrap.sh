@@ -17,22 +17,22 @@ k8s_revision=$(cat /opt/canonical/k8s.revision)
 
 cd /opt/canonical-k8s
 
-# snapd
-until (sudo snap ack "snapd_${snapd_revision}.assert" || true) && \
+# snapd (exact file name)
+until sudo snap ack "snapd_${snapd_revision}.assert" && \
       sudo snap install "./snapd_${snapd_revision}.snap"; do
   echo "retrying snapd install in 10s"
   sleep 10
 done
 
-# core
-until (sudo snap ack "core_${core_revision}.assert" || true) && \
-      sudo snap install "./core_${core_revision}.snap" --classic; do
+# core (wildcard like your old code)
+until sudo snap ack core*_"${core_revision}".assert && \
+      sudo snap install ./core*_"${core_revision}".snap --classic; do
   echo "retrying core install in 10s"
   sleep 10
 done
 
-# k8s
-until (sudo snap ack "k8s_${k8s_revision}.assert" || true) && \
+# k8s (exact file name)
+until sudo snap ack "k8s_${k8s_revision}.assert" && \
       sudo snap install "./k8s_${k8s_revision}.snap" --classic; do
   echo "retrying k8s install in 10s"
   sleep 10
