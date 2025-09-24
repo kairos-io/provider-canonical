@@ -16,9 +16,27 @@ core_revision=$(cat /opt/canonical/core.revision)
 k8s_revision=$(cat /opt/canonical/k8s.revision)
 
 cd /opt/canonical-k8s
-snap ack snapd_"${snapd_revision}".assert && sudo snap install ./snapd_"${snapd_revision}".snap
-snap ack core*_"${core_revision}".assert && sudo snap install ./core*_"${core_revision}".snap --classic
-snap ack k8s_"${k8s_revision}".assert && sudo snap install ./k8s_"${k8s_revision}".snap --classic
+
+# snapd
+until (sudo snap ack "snapd_${snapd_revision}.assert" || true) && \
+      sudo snap install "./snapd_${snapd_revision}.snap"; do
+  echo "retrying snapd install in 10s"
+  sleep 10
+done
+
+# core
+until (sudo snap ack "core_${core_revision}.assert" || true) && \
+      sudo snap install "./core_${core_revision}.snap" --classic; do
+  echo "retrying core install in 10s"
+  sleep 10
+done
+
+# k8s
+until (sudo snap ack "k8s_${k8s_revision}.assert" || true) && \
+      sudo snap install "./k8s_${k8s_revision}.snap" --classic; do
+  echo "retrying k8s install in 10s"
+  sleep 10
+done
 
 bootstrap_cmd=''
 
