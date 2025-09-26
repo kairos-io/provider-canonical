@@ -4,7 +4,7 @@ go 1.23.8
 
 require (
 	github.com/canonical/k8s-snap-api v1.0.23
-	github.com/kairos-io/kairos-sdk v0.7.2
+	github.com/kairos-io/kairos-sdk v0.11.0
 	github.com/mudler/go-pluggable v0.0.0-20230126220627-7710299a0ae5
 	github.com/mudler/yip v1.16.0
 	github.com/onsi/gomega v1.38.2
