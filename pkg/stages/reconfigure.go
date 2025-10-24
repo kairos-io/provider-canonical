@@ -75,6 +75,7 @@ func getReconfigureServiceRestartStage() yip.Stage {
 		Name: "Restart Kube Components Services",
 		Commands: []string{
 			"systemctl daemon-reload",
+			"systemctl restart snap.k8s.containerd.service",
 			"systemctl restart snap.k8s.kube-apiserver.service",
 			"systemctl restart snap.k8s.kube-controller-manager.service",
 			"systemctl restart snap.k8s.kube-scheduler.service",
@@ -114,6 +115,7 @@ func getWorkerReconfigureServiceRestartStage() yip.Stage {
 		Name: "Restart Kube Components Services",
 		Commands: []string{
 			"systemctl daemon-reload",
+			"systemctl restart snap.k8s.containerd.service",
 			"systemctl restart snap.k8s.kube-proxy.service",
 			"systemctl restart snap.k8s.kubelet.service",
 		},
