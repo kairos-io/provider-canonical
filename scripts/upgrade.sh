@@ -2,7 +2,7 @@
 
 source "$(dirname "$0")/common.sh"
 setup_logging /var/log/canonical-upgrade.log
-set -xeuo pipefail
+set -eu
 
 export KUBECONFIG=/etc/kubernetes/admin.conf
 current_node_name=$(cat /etc/hostname)
@@ -10,12 +10,14 @@ current_node_name=$(cat /etc/hostname)
 # -------- inputs --------
 node_role=$1
 
+log "starting canonical k8s upgrade"
+
 current_installed_revision=$(snap list k8s | grep k8s | awk '{print $3}')
-echo "current k8s revision: $current_installed_revision"
+log "current k8s revision: $current_installed_revision"
 
 upcoming_revision=$(cat /opt/canonical/k8s.revision)
 if [ "$current_installed_revision" = "$upcoming_revision" ]; then
-	echo "k8s is already up to date"
+	log "k8s is already up to date"
 	exit 0
 fi
 
@@ -35,10 +37,10 @@ acquire_lock() {
 		until kubectl create configmap upgrade-lock -n kube-system --from-literal=node="${current_node_name}" > /dev/null; do
 			upgrade_node=$(get_current_upgrading_node_name)
 			if [ "$upgrade_node" = "$current_node_name" ]; then
-				echo "resuming upgrade"
+				log "resuming upgrade"
 				break
 			fi
-			echo "failed to create configmap for upgrade lock, upgrading is going on the node ${upgrade_node}, retrying in 60 sec"
+			log "failed to create configmap for upgrade lock, upgrade in progress on node ${upgrade_node}; retrying in 60s..."
 			sleep 60
 		done
 	fi
@@ -53,7 +55,7 @@ do_upgrade() {
 		wait_for_k8s_ready
 	fi
 
-	hold_k8s_snap
+	hold_k8s_snap_refresh
 
 	delete_lock_config_map
 }

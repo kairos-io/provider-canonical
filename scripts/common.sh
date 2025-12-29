@@ -12,14 +12,19 @@ setup_logging() {
   export BASH_XTRACEFD="19"
 }
 
+log() {
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"
+}
+
 # -------- Retry helpers --------
 with_retry() {
   local desc="$1"; shift
   local delay="${RETRY_DELAY:-10}"
   until "$@"; do
-    echo "${desc}; retrying in ${delay}s..."
+    log "${desc} failed; retrying in ${delay}s..."
     sleep "$delay"
   done
+  log "${desc} succeeded"
 }
 
 # -------- Snap helpers --------
@@ -29,7 +34,7 @@ snap_is_busy() {
 
 wait_for_snap_idle() {
   until ! snap_is_busy; do
-    echo "snapd has a change in progress; waiting 10s..."
+    log "snapd has a change in progress; waiting 10s..."
     sleep 10
   done
 }
@@ -42,7 +47,7 @@ install_snapd() {
   local snap_file="./snapd_${revision}.snap"
 
   if [[ ! -f "$assert_file" || ! -f "$snap_file" ]]; then
-    echo "snapd files not found yet"
+    log "snapd files not found yet"
     return 1
   fi
 
@@ -62,13 +67,13 @@ install_core() {
   shopt -u nullglob
 
   if [[ ${#assert_files[@]} -eq 0 || ${#snap_files[@]} -eq 0 ]]; then
-    echo "core snap files not found yet"
+    log "core snap files not found yet"
     return 1
   fi
 
   wait_for_snap_idle
   sudo snap ack "${assert_files[0]}"
-  sudo snap install "${snap_files[0]}" --classic
+  sudo snap install "${snap_files[0]}"
 }
 
 # Install k8s snap
@@ -79,7 +84,7 @@ install_k8s() {
   local snap_file="./k8s_${revision}.snap"
 
   if [[ ! -f "$assert_file" || ! -f "$snap_file" ]]; then
-    echo "k8s files not found yet"
+    log "k8s files not found yet"
     return 1
   fi
 
@@ -101,11 +106,13 @@ install_all_snaps() {
 # -------- K8s helpers --------
 wait_for_k8s_ready() {
   until k8s status --wait-ready; do
-    echo "waiting for k8s status..."
+    log "waiting for k8s status..."
     sleep 10
   done
+  log "k8s is ready"
 }
 
-hold_k8s_snap() {
+hold_k8s_snap_refresh() {
+  log "holding k8s snap refresh"
   snap refresh k8s --hold
 }
