@@ -2,7 +2,7 @@
 
 source "$(dirname "$0")/common.sh"
 setup_logging /var/log/canonical-upgrade.log
-set -eu
+set -u
 
 export KUBECONFIG=/etc/kubernetes/admin.conf
 current_node_name=$(cat /etc/hostname)
@@ -13,13 +13,16 @@ node_role=$1
 log "starting canonical k8s upgrade"
 
 current_installed_revision=$(snap list k8s | grep k8s | awk '{print $3}')
-log "current k8s revision: $current_installed_revision"
 
 upcoming_revision=$(cat /opt/canonical/k8s.revision)
+log "current installed k8s revision: $current_installed_revision"
+log "upcoming k8s revision to install: $upcoming_revision"
 if [ "$current_installed_revision" = "$upcoming_revision" ]; then
 	log "k8s is already up to date"
 	exit 0
 fi
+
+log "upgrading k8s from $current_installed_revision to $upcoming_revision"
 
 get_current_upgrading_node_name() {
 	kubectl get configmap upgrade-lock -n kube-system -o jsonpath="{['data']['node']}"

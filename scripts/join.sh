@@ -2,7 +2,7 @@
 
 source "$(dirname "$0")/common.sh"
 setup_logging /var/log/canonical-join.log
-set -eu
+set -u
 
 token=$1
 advertise_address=$2

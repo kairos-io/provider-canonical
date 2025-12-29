@@ -2,7 +2,7 @@
 
 source "$(dirname "$0")/common.sh"
 setup_logging /var/log/canonical-bootstrap.log
-set -eu
+set -u
 
 advertise_address=$1
 
