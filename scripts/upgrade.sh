@@ -1,12 +1,8 @@
 #!/bin/bash
 
+source "$(dirname "$0")/common.sh"
+setup_logging /var/log/canonical-upgrade.log
 set -xeuo pipefail
-
-exec   > >(tee -ia /var/log/canonical-upgrade.log)
-exec  2> >(tee -ia /var/log/canonical-upgrade.log >& 2)
-exec 19>> /var/log/canonical-bootstrap.log
-
-export BASH_XTRACEFD="19"
 
 export KUBECONFIG=/etc/kubernetes/admin.conf
 current_node_name=$(cat /etc/hostname)
@@ -29,22 +25,9 @@ get_current_upgrading_node_name() {
 
 delete_lock_config_map() {
 	# Delete the configmap lock once the upgrade completes
-	if [ "$node_role" != "worker" ]
-	then
+	if [ "$node_role" != "worker" ]; then
 		kubectl delete configmap upgrade-lock -n kube-system
 	fi
-}
-
-snap_is_busy() {
-	# Check for any running snapd changes
-	snap changes 2>/dev/null | awk 'NR>1 {print $2}' | grep -qiE 'doing|undoing'
-}
-
-wait_for_snap_idle() {
-	until ! snap_is_busy ; do
-		echo "snapd has a change in progress; waiting 10s..."
-		sleep 10
-	done
 }
 
 acquire_lock() {
@@ -61,50 +44,16 @@ acquire_lock() {
 	fi
 }
 
-with_retry() {
-	local desc="$1"; shift
-	until "$@"; do
-		echo "${desc} failed; retrying in 10s..."
-		sleep 10
-	done
-}
-
 do_upgrade() {
 	acquire_lock
 
-	snap wait system seed.loaded
-
-	snapd_revision=$(cat /opt/canonical/snapd.revision)
-	core_revision=$(cat /opt/canonical/core.revision)
-	k8s_revision=$(cat /opt/canonical/k8s.revision)
-
-	cd /opt/canonical-k8s
-
-	with_retry "snapd install" bash -c "
-		wait_for_snap_idle
-		snap ack snapd_${snapd_revision}.assert &&
-		sudo snap install ./snapd_${snapd_revision}.snap
-	"
-	with_retry "core install" bash -c "
-		wait_for_snap_idle
-		snap ack core20_${core_revision}.assert &&
-		sudo snap install ./core20_${core_revision}.snap
-	"
-	with_retry "k8s install" bash -c "
-		wait_for_snap_idle
-		snap ack "k8s_${k8s_revision}.assert" &&
-		sudo snap install "./k8s_${k8s_revision}.snap" --classic
-	"
+	install_all_snaps
 
 	if [ "$node_role" != "worker" ]; then
-		until k8s status --wait-ready
-		do
-			echo "waiting for status"
-			sleep 10
-		done
+		wait_for_k8s_ready
 	fi
 
-	snap refresh k8s --hold
+	hold_k8s_snap
 
 	delete_lock_config_map
 }
