@@ -13,6 +13,7 @@ import (
 func GetPreSetupStages(clusterCtx *domain.ClusterContext) []yip.Stage {
 	var stages []yip.Stage
 
+	stages = append(stages, getProviderEnvironmentStage(clusterCtx)...)
 	stages = append(stages, getProxyStage(clusterCtx)...)
 	stages = append(stages, getPreCommandStages())
 	if utils.DirExists(fs.OSFS, clusterCtx.LocalImagesPath) {
