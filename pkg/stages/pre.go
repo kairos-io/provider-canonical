@@ -12,9 +12,8 @@ import (
 
 func GetPreSetupStages(clusterCtx *domain.ClusterContext) []yip.Stage {
 	var stages []yip.Stage
-	if proxyStage := getProxyStage(clusterCtx); proxyStage != nil {
-		stages = append(stages, *proxyStage)
-	}
+
+	stages = append(stages, getProxyStage(clusterCtx)...)
 	stages = append(stages, getPreCommandStages())
 	if utils.DirExists(fs.OSFS, clusterCtx.LocalImagesPath) {
 		stages = append(stages, getPreImportLocalImageStage(clusterCtx.LocalImagesPath))

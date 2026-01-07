@@ -116,3 +116,9 @@ hold_k8s_snap_refresh() {
   log "holding k8s snap refresh"
   snap refresh k8s --hold
 }
+
+load_provider_environment() {
+  if [ -f "/run/provider-canonical/env" ]; then
+    . "/run/provider-canonical/env"
+  fi
+}

@@ -2,6 +2,7 @@ package stages
 
 import (
 	"fmt"
+	"maps"
 	"path/filepath"
 	"strings"
 
@@ -14,24 +15,45 @@ const (
 	envPrefix = "Environment="
 )
 
-func getProxyStage(clusterCtx *domain.ClusterContext) *yip.Stage {
-	if !utils.IsProxyConfigured(clusterCtx.EnvConfig) {
-		return nil
+func getProviderEnvironmentStage(clusterCtx *domain.ClusterContext) []yip.Stage {
+	stages := []yip.Stage{}
+
+	env := map[string]string{}
+	if utils.IsProxyConfigured(clusterCtx.EnvConfig) {
+		maps.Copy(env, getProxyEnvironments(clusterCtx))
 	}
 
-	return &yip.Stage{
-		Name:        "Set proxy config files and envs",
-		Environment: getProxyEnvironments(clusterCtx),
-		Files: []yip.File{
-			{
-				Path:        filepath.Join("/etc/default", "kubelet"),
-				Permissions: 0644,
-				Content:     kubeletProxyEnv(clusterCtx),
-			},
-			{
-				Path:        filepath.Join("/etc/systemd/system/snap.k8s.containerd.service.d", "http-proxy.conf"),
-				Permissions: 0644,
-				Content:     containerdProxyEnv(clusterCtx),
+	if len(env) > 0 {
+		stages = append(stages, yip.Stage{
+			Name:            "Set provider environment",
+			Environment:     env,
+			EnvironmentFile: "/run/provider-canonical/env",
+		})
+	}
+
+	return stages
+}
+
+func getProxyStage(clusterCtx *domain.ClusterContext) []yip.Stage {
+	if !utils.IsProxyConfigured(clusterCtx.EnvConfig) {
+		return []yip.Stage{}
+	}
+
+	return []yip.Stage{
+		{
+			Name:        "Set proxy config files and envs",
+			Environment: getProxyEnvironments(clusterCtx),
+			Files: []yip.File{
+				{
+					Path:        filepath.Join("/etc/default", "kubelet"),
+					Permissions: 0644,
+					Content:     kubeletProxyEnv(clusterCtx),
+				},
+				{
+					Path:        filepath.Join("/etc/systemd/system/snap.k8s.containerd.service.d", "http-proxy.conf"),
+					Permissions: 0644,
+					Content:     containerdProxyEnv(clusterCtx),
+				},
 			},
 		},
 	}

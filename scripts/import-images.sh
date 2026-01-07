@@ -2,6 +2,8 @@
 
 set -x
 
+load_provider_environment
+
 CONTENT_PATH=$1
 
 mkdir -p /var/snap/k8s/common/images

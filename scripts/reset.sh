@@ -2,6 +2,8 @@
 
 set -x
 
+load_provider_environment
+
 node_role=$1
 node_name=$(cat /etc/hostname)
 
