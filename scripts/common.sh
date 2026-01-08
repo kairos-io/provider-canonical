@@ -29,7 +29,8 @@ with_retry() {
 
 # -------- Snap helpers --------
 snap_is_busy() {
-  snap changes 2>/dev/null | awk 'NR>1 {print $2}' | grep -qiE 'doing|undoing'
+  # Skip "Initialize device" which hangs in airgap (tries to contact api.snapcraft.io)
+  snap changes 2>/dev/null | grep -iE 'doing|undoing' | grep -ivq 'Initialize device'
 }
 
 wait_for_snap_idle() {
