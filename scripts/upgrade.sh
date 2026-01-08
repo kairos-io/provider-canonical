@@ -4,6 +4,8 @@ source "$(dirname "$0")/common.sh"
 setup_logging /var/log/canonical-upgrade.log
 set -u
 
+load_provider_environment
+
 export KUBECONFIG=/etc/kubernetes/admin.conf
 current_node_name=$(cat /etc/hostname)
 

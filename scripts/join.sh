@@ -4,6 +4,8 @@ source "$(dirname "$0")/common.sh"
 setup_logging /var/log/canonical-join.log
 set -u
 
+load_provider_environment
+
 token=$1
 advertise_address=$2
 node_role=$3
