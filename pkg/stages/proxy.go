@@ -56,6 +56,17 @@ func getProxyStage(clusterCtx *domain.ClusterContext) []yip.Stage {
 				},
 			},
 		},
+		getProxyServiceReloadStage(),
+	}
+}
+
+func getProxyServiceReloadStage() yip.Stage {
+	return yip.Stage{
+		Name: "Reload systemd and restart containerd after proxy config",
+		Commands: []string{
+			"systemctl daemon-reload",
+			"systemctl restart snap.k8s.containerd.service",
+		},
 	}
 }
 
