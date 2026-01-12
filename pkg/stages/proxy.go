@@ -12,9 +12,37 @@ import (
 )
 
 const (
-	envFilePrefix = "EnvironmentFile="
+	envFilePrefix = "EnvironmentFile"
 	envFilePath   = "/run/provider-canonical/env"
 )
+
+// k8sSnapServices lists all snap.k8s services that need proxy drop-in configs.
+var k8sSnapServices = []string{
+	"snap.k8s.containerd.service",
+	"snap.k8s.k8s-apiserver-proxy.service",
+	"snap.k8s.k8s-dqlite.service",
+	"snap.k8s.k8sd.service",
+	"snap.k8s.kube-apiserver.service",
+	"snap.k8s.kube-controller-manager.service",
+	"snap.k8s.kube-proxy.service",
+	"snap.k8s.kube-scheduler.service",
+	"snap.k8s.kubelet.service",
+	"snap.k8s.etcd.service",
+}
+
+// getProxyDropInFiles generates systemd drop-in files for all k8s snap services.
+func getProxyDropInFiles() []yip.File {
+	content := fmt.Sprintf("[Service]\n%s=-%s", envFilePrefix, envFilePath)
+	files := make([]yip.File, 0, len(k8sSnapServices))
+	for _, svc := range k8sSnapServices {
+		files = append(files, yip.File{
+			Path:        filepath.Join("/etc/systemd/system", svc+".d", "http-proxy.conf"),
+			Permissions: 0644,
+			Content:     content,
+		})
+	}
+	return files
+}
 
 func getProviderEnvironmentStage(clusterCtx *domain.ClusterContext) []yip.Stage {
 	stages := []yip.Stage{}
@@ -40,34 +68,33 @@ func getProxyStage(clusterCtx *domain.ClusterContext) []yip.Stage {
 		return []yip.Stage{}
 	}
 
+	files := []yip.File{
+		{
+			Path:        filepath.Join("/etc/default", "kubelet"),
+			Permissions: 0644,
+			Content:     kubeletProxyEnv(clusterCtx),
+		},
+	}
+	files = append(files, getProxyDropInFiles()...)
+
 	return []yip.Stage{
 		{
 			Name:        "Set proxy config files and envs",
 			Environment: getProxyEnvironments(clusterCtx),
-			Files: []yip.File{
-				{
-					Path:        filepath.Join("/etc/default", "kubelet"),
-					Permissions: 0644,
-					Content:     kubeletProxyEnv(clusterCtx),
-				},
-				{
-					Path:        filepath.Join("/etc/systemd/system/snap.k8s.containerd.service.d", "http-proxy.conf"),
-					Permissions: 0644,
-					Content:     fmt.Sprintf("[Service]\n%s-%s", envFilePrefix, envFilePath),
-				},
-			},
+			Files:       files,
 		},
 		getProxyServiceReloadStage(),
 	}
 }
 
 func getProxyServiceReloadStage() yip.Stage {
+	commands := []string{"systemctl daemon-reload"}
+	for _, svc := range k8sSnapServices {
+		commands = append(commands, fmt.Sprintf("systemctl restart %s", svc))
+	}
 	return yip.Stage{
-		Name: "Reload systemd and restart containerd after proxy config",
-		Commands: []string{
-			"systemctl daemon-reload",
-			"systemctl restart snap.k8s.containerd.service",
-		},
+		Name:     "Reload systemd and restart k8s services after proxy config",
+		Commands: commands,
 	}
 }
 
