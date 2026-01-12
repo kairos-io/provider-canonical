@@ -12,7 +12,6 @@ import (
 )
 
 const (
-	envPrefix     = "Environment="
 	envFilePrefix = "EnvironmentFile="
 	envFilePath   = "/run/provider-canonical/env"
 )
@@ -54,7 +53,7 @@ func getProxyStage(clusterCtx *domain.ClusterContext) []yip.Stage {
 				{
 					Path:        filepath.Join("/etc/systemd/system/snap.k8s.containerd.service.d", "http-proxy.conf"),
 					Permissions: 0644,
-					Content:     fmt.Sprintf("[Service]\n%s=-%s", envFilePrefix, envFilePath),
+					Content:     fmt.Sprintf("[Service]\n%s-%s", envFilePrefix, envFilePath),
 				},
 			},
 		},
