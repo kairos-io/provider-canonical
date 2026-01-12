@@ -1,7 +1,0 @@
-root@control-plane-pooledge-01ae24b1e3c45422abac9a24424c07fa:/var/log# snap changes
-ID   Status  Spawn               Ready               Summary
-1    Done    today at 05:30 UTC  today at 05:30 UTC  Initialize system state
-2    Done    today at 05:32 UTC  today at 05:33 UTC  Install "snapd" snap from file "./snapd_24505.snap"
-3    Error   today at 05:32 UTC  today at 05:53 UTC  Initialize device
-4    Done    today at 05:53 UTC  today at 05:53 UTC  Install "core20" snap from file "./core20_2599.snap"
-5    Doing   today at 05:53 UTC  -                   Initialize device
