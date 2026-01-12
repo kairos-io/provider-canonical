@@ -12,7 +12,9 @@ import (
 )
 
 const (
-	envPrefix = "Environment="
+	envPrefix     = "Environment="
+	envFilePrefix = "EnvironmentFile="
+	envFilePath   = "/run/provider-canonical/env"
 )
 
 func getProviderEnvironmentStage(clusterCtx *domain.ClusterContext) []yip.Stage {
@@ -27,7 +29,7 @@ func getProviderEnvironmentStage(clusterCtx *domain.ClusterContext) []yip.Stage 
 		stages = append(stages, yip.Stage{
 			Name:            "Set provider environment",
 			Environment:     env,
-			EnvironmentFile: "/run/provider-canonical/env",
+			EnvironmentFile: envFilePath,
 		})
 	}
 
@@ -52,7 +54,7 @@ func getProxyStage(clusterCtx *domain.ClusterContext) []yip.Stage {
 				{
 					Path:        filepath.Join("/etc/systemd/system/snap.k8s.containerd.service.d", "http-proxy.conf"),
 					Permissions: 0644,
-					Content:     containerdProxyEnv(clusterCtx),
+					Content:     fmt.Sprintf("[Service]\n%s=-%s", envFilePrefix, envFilePath),
 				},
 			},
 		},
@@ -105,36 +107,5 @@ func kubeletProxyEnv(clusterCtx *domain.ClusterContext) string {
 		noProxy = noProxy + "," + userNoProxy
 	}
 	proxy = append(proxy, fmt.Sprintf("NO_PROXY=%s", noProxy))
-	return strings.Join(proxy, "\n")
-}
-
-func containerdProxyEnv(clusterCtx *domain.ClusterContext) string {
-	var proxy []string
-
-	proxyMap := clusterCtx.EnvConfig
-
-	httpProxy := proxyMap["HTTP_PROXY"]
-	httpsProxy := proxyMap["HTTPS_PROXY"]
-	userNoProxy := proxyMap["NO_PROXY"]
-
-	proxy = append(proxy, "[Service]")
-	noProxy := utils.GetDefaultNoProxy(clusterCtx)
-
-	if len(httpProxy) > 0 {
-		proxy = append(proxy, fmt.Sprintf(envPrefix+"\""+"HTTP_PROXY=%s"+"\"", httpProxy))
-		proxy = append(proxy, fmt.Sprintf(envPrefix+"\""+"http_proxy=%s"+"\"", httpProxy))
-	}
-
-	if len(httpsProxy) > 0 {
-		proxy = append(proxy, fmt.Sprintf(envPrefix+"\""+"HTTPS_PROXY=%s"+"\"", httpsProxy))
-		proxy = append(proxy, fmt.Sprintf(envPrefix+"\""+"https_proxy=%s"+"\"", httpProxy))
-	}
-
-	if len(userNoProxy) > 0 {
-		noProxy = noProxy + "," + userNoProxy
-	}
-	proxy = append(proxy, fmt.Sprintf(envPrefix+"\""+"NO_PROXY=%s"+"\"", noProxy))
-	proxy = append(proxy, fmt.Sprintf(envPrefix+"\""+"no_proxy=%s"+"\"", noProxy))
-
 	return strings.Join(proxy, "\n")
 }
