@@ -13,7 +13,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Set up QEMU
         uses: docker/setup-qemu-action@master
         with:
@@ -28,14 +28,14 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - run: go test -v ./...
   build-provider-package:
     runs-on: ubuntu-latest
     permissions:
       packages: write
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Set up QEMU
         uses: docker/setup-qemu-action@master
         with:
