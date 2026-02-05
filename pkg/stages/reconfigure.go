@@ -128,6 +128,7 @@ func getApiserverCertRegenerateStage(incomingSans []string) *[]yip.Stage {
 	}
 	apiserverCertPath := filepath.Join(domain.KubeCertificateDirPath, "apiserver.crt")
 	if !utils.FileExists(fs.OSFS, apiserverCertPath) {
+		logrus.Debugf("apiserver certificate not found at %s, skipping regeneration", apiserverCertPath)
 		return nil
 	}
 	allExistingSans, err := utils.GetAllSans(apiserverCertPath)
@@ -136,11 +137,13 @@ func getApiserverCertRegenerateStage(incomingSans []string) *[]yip.Stage {
 	}
 
 	if containsAnyNonMatch(incomingSans, allExistingSans) {
+		logrus.Infof("Certificate regeneration required: new SANs %v not present in existing certificate", incomingSans)
 		return &[]yip.Stage{
 			getApiserverCertFileStage(incomingSans, apiserverCertPath),
 			getApiserverServiceRestartStage(),
 		}
 	}
+	logrus.Debugf("Certificate regeneration not needed: all SANs %v already present in certificate", incomingSans)
 	return nil
 }
 
@@ -151,6 +154,9 @@ func getApiserverCertFileStage(incomingSans []string, apiserverCertPath string) 
 	if err != nil {
 		logrus.Fatalf("failed to get cert sans: %v", err)
 	}
+
+	logrus.Infof("Regenerating kube-apiserver certificate with existing SANs: DNS=%v, IP=%v, and new SANs: DNS=%v, IP=%v",
+		existingDnsSans, existingIpSans, dnsSANs, ipSANs)
 
 	notBefore := time.Now()
 	template, err := utils.GenerateCertificate(
@@ -177,6 +183,13 @@ func getApiserverCertFileStage(incomingSans []string, apiserverCertPath string) 
 	if err != nil {
 		logrus.Fatalf("failed to sign certificate: %v", err)
 	}
+
+	// Additional validation after generation (SignCertificate already validates, but this provides extra safety)
+	if err := utils.ValidateCertificateKeyPair(cert, key); err != nil {
+		logrus.Fatalf("CRITICAL: Generated certificate and key do not match: %v", err)
+	}
+
+	logrus.Infof("Successfully regenerated kube-apiserver certificate and key pair")
 
 	return yip.Stage{
 		Name: "Regenerate Apiserver Certificates",

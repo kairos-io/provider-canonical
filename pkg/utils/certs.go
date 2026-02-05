@@ -7,11 +7,12 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
-	"github.com/kairos-io/provider-canonical/pkg/fs"
-	"github.com/pkg/errors"
 	"math/big"
 	"net"
 	"time"
+
+	"github.com/kairos-io/provider-canonical/pkg/fs"
+	"github.com/pkg/errors"
 )
 
 func GetExistingIpAndDnsSans(certPath string) ([]string, []net.IP, error) {
@@ -116,18 +117,33 @@ func SignCertificate(certificate *x509.Certificate, bits int, parent *x509.Certi
 		return "", "", fmt.Errorf("failed to encode private key PEM")
 	}
 
+	// Determine which public key to use in the certificate and which private key to use for signing
+	var certPubKey any
+	var signPrivKey any
+
 	if pub == nil && priv == nil {
-		priv = key
-		pub = &key.PublicKey
+		// Self-signed certificate: use the newly generated key for both
+		certPubKey = &key.PublicKey
+		signPrivKey = key
+	} else {
+		// CA-signed certificate: use the new key's public key in the certificate,
+		// but sign with the CA's private key
+		certPubKey = &key.PublicKey
+		signPrivKey = priv
 	}
 
-	derBytes, err := x509.CreateCertificate(rand.Reader, certificate, parent, pub, priv)
+	derBytes, err := x509.CreateCertificate(rand.Reader, certificate, parent, certPubKey, signPrivKey)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to sign certificate: %w", err)
 	}
 	crtPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
 	if crtPEM == nil {
 		return "", "", fmt.Errorf("failed to encode certificate PEM")
+	}
+
+	// Validate that the certificate and private key match before returning
+	if err := ValidateCertificateKeyPair(string(crtPEM), string(keyPEM)); err != nil {
+		return "", "", fmt.Errorf("certificate and private key mismatch detected: %w", err)
 	}
 
 	return string(crtPEM), string(keyPEM), nil
@@ -178,4 +194,35 @@ func loadRSAPrivateKey(keyPEM string) (*rsa.PrivateKey, error) {
 		return v, nil
 	}
 	return nil, fmt.Errorf("unknown private key block type %q", pb.Type)
+}
+
+// ValidateCertificateKeyPair verifies that a certificate and private key match.
+// This is a critical validation to prevent certificate/key mismatches that would
+// cause TLS handshake failures.
+func ValidateCertificateKeyPair(certPEM, keyPEM string) error {
+	cert, key, err := LoadCertificate(certPEM, keyPEM)
+	if err != nil {
+		return fmt.Errorf("failed to load certificate and key for validation: %w", err)
+	}
+
+	if cert == nil || key == nil {
+		return fmt.Errorf("certificate or private key is nil")
+	}
+
+	// Extract the public key from the certificate
+	certPubKey, ok := cert.PublicKey.(*rsa.PublicKey)
+	if !ok {
+		return fmt.Errorf("certificate public key is not RSA")
+	}
+
+	// Compare the modulus and exponent of the certificate's public key with the private key's public key
+	if certPubKey.N.Cmp(key.N) != 0 {
+		return fmt.Errorf("certificate public key modulus does not match private key modulus")
+	}
+
+	if certPubKey.E != key.E {
+		return fmt.Errorf("certificate public key exponent does not match private key exponent")
+	}
+
+	return nil
 }
