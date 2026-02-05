@@ -1,6 +1,7 @@
 package stages
 
 import (
+	"crypto/rsa"
 	"crypto/x509"
 	_ "embed"
 	"encoding/pem"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/kairos-io/provider-canonical/pkg/domain"
 	"github.com/kairos-io/provider-canonical/pkg/fs"
+	"github.com/kairos-io/provider-canonical/pkg/utils"
 	. "github.com/onsi/gomega"
 	"github.com/twpayne/go-vfs/v4/vfst"
 )
@@ -195,6 +197,18 @@ func TestGetApiserverCertFileStage(t *testing.T) {
 
 		err = newCert.CheckSignatureFrom(caCert)
 		g.Expect(err).NotTo(HaveOccurred(), "New certificate not signed by provided CA")
+
+		// Verify that the private key matches the certificate's public key
+		newKeyContent := stage.Files[1].Content
+		_, newKey, err := utils.LoadCertificate(newCertContent, newKeyContent)
+		g.Expect(err).NotTo(HaveOccurred(), "Failed to load certificate and key")
+		g.Expect(newKey).NotTo(BeNil(), "Private key should not be nil")
+
+		// Verify the public key in the certificate matches the private key
+		certPubKey, ok := newCert.PublicKey.(*rsa.PublicKey)
+		g.Expect(ok).To(BeTrue(), "Certificate public key should be RSA")
+		g.Expect(certPubKey.N.Cmp(newKey.N)).To(Equal(0), "Private key modulus should match certificate public key modulus")
+		g.Expect(certPubKey.E).To(Equal(newKey.E), "Private key exponent should match certificate public key exponent")
 
 		g.Expect(stage.Files[0].Path).To(Equal(filepath.Join(domain.KubeCertificateDirPath, "apiserver.crt")))
 		g.Expect(stage.Files[0].Permissions).To(Equal(uint32(0600)))
