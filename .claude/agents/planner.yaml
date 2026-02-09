@@ -1,4 +1,4 @@
-name: Planner Agent - Canonical K8s Provider
+name: Provider-canonical Planner
 description: Strategic planning agent for Kairos Canonical Kubernetes provider architecture and implementation
 
 instructions: |

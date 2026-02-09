@@ -1,4 +1,4 @@
-name: Code Review Agent - Canonical K8s Provider
+name: Provider-canonical Code Review
 description: Code review and quality assurance agent for Kairos Canonical Kubernetes provider
 
 instructions: |

@@ -1,4 +1,4 @@
-name: Developer Agent - Canonical K8s Provider
+name: Provider-canonical Developer
 description: Implementation agent for Kairos Canonical Kubernetes provider development
 
 instructions: |
