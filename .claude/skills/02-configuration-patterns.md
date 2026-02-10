@@ -1,3 +1,16 @@
+---
+skill: Canonical Kubernetes Configuration Patterns
+description: Skill documentation for provider-canonical
+type: general
+repository: provider-canonical
+team: edge
+topics: [kubernetes, provider, edge, cluster]
+difficulty: intermediate
+last_updated: 2026-02-09
+related_skills: []
+memory_references: []
+---
+
 # Canonical Kubernetes Configuration Patterns
 
 ## Overview
