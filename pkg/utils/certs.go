@@ -7,11 +7,12 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
-	"github.com/kairos-io/provider-canonical/pkg/fs"
-	"github.com/pkg/errors"
 	"math/big"
 	"net"
 	"time"
+
+	"github.com/kairos-io/provider-canonical/pkg/fs"
+	"github.com/pkg/errors"
 )
 
 func GetExistingIpAndDnsSans(certPath string) ([]string, []net.IP, error) {
