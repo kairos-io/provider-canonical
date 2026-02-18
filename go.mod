@@ -3,7 +3,7 @@ module github.com/kairos-io/provider-canonical
 go 1.25.7
 
 require (
-	github.com/canonical/k8s-snap-api v1.0.23
+	github.com/canonical/k8s-snap-api v1.2.1
 	github.com/kairos-io/kairos-sdk v0.7.2
 	github.com/mudler/go-pluggable v0.0.0-20230126220627-7710299a0ae5
 	github.com/mudler/yip v1.16.0
