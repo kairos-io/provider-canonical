@@ -56,11 +56,12 @@ func getFinalStages(clusterCtx *domain.ClusterContext) []yip.Stage {
 
 	finalStages = append(finalStages, stages.GetPreSetupStages(clusterCtx)...)
 
-	if clusterCtx.NodeRole == clusterplugin.RoleInit {
+	switch clusterCtx.NodeRole {
+	case clusterplugin.RoleInit:
 		finalStages = append(finalStages, stages.GetInitStage(clusterCtx)...)
-	} else if clusterCtx.NodeRole == clusterplugin.RoleControlPlane {
+	case clusterplugin.RoleControlPlane:
 		finalStages = append(finalStages, stages.GetControlPlaneJoinStage(clusterCtx)...)
-	} else if clusterCtx.NodeRole == clusterplugin.RoleWorker {
+	case clusterplugin.RoleWorker:
 		finalStages = append(finalStages, stages.GetWorkerJoinStage(clusterCtx)...)
 	}
 	return finalStages

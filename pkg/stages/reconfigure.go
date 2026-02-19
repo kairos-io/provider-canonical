@@ -254,7 +254,7 @@ func readServiceArgsFile(root vfs.FS, serviceName string) (map[string]*string, e
 	if err != nil {
 		logrus.Fatal(err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	args := make(map[string]*string)
 
