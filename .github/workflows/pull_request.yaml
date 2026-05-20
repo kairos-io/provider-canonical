@@ -29,6 +29,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.25.10"
       - run: go test -v ./...
   build-provider-package:
     runs-on: ubuntu-latest

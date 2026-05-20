@@ -1,6 +1,6 @@
 module github.com/kairos-io/provider-canonical
 
-go 1.25.7
+go 1.25.10
 
 require (
 	github.com/canonical/k8s-snap-api v1.0.23
