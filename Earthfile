@@ -19,7 +19,7 @@ ARG PROVIDER_IMAGE_NAME=canonical
 
 lint:
     FROM golang:$GOLANG_VERSION
-    RUN wget -O- -nv https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s ${GOLINT_VERSION}
+    RUN go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@${GOLINT_VERSION}
     WORKDIR /build
     COPY . .
     RUN golangci-lint run --timeout=5m
