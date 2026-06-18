@@ -16,7 +16,7 @@ log "starting canonical k8s upgrade"
 
 current_installed_revision=$(snap list k8s | grep k8s | awk '{print $3}')
 
-upcoming_revision=$(cat /opt/canonical/k8s.revision)
+upcoming_revision=$(read_revision k8s)
 log "current installed k8s revision: $current_installed_revision"
 log "upcoming k8s revision to install: $upcoming_revision"
 if [ "$current_installed_revision" = "$upcoming_revision" ]; then

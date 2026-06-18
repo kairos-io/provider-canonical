@@ -2,3 +2,5 @@
 vendor/
 build/
 local/
+.DS_Store
+.claude/hook-logs/*
