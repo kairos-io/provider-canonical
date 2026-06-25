@@ -2,7 +2,7 @@
 
 source "$(dirname "$0")/common.sh"
 setup_logging /var/log/canonical-upgrade.log
-set -u
+set -xu
 
 load_provider_environment
 
