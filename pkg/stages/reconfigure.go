@@ -22,66 +22,92 @@ import (
 
 func getBootstrapReconfigureStage(config apiv1.BootstrapConfig) []yip.Stage {
 	return getReconfigureStage(config.ExtraNodeKubeAPIServerArgs, config.ExtraNodeKubeControllerManagerArgs,
-		config.ExtraNodeKubeSchedulerArgs, config.ExtraNodeKubeProxyArgs, config.ExtraNodeKubeletArgs)
+		config.ExtraNodeKubeSchedulerArgs, config.ExtraNodeKubeProxyArgs, config.ExtraNodeKubeletArgs,
+		config.ExtraNodeEtcdArgs)
 }
 
 func getControlPlaneReconfigureStage(config apiv1.ControlPlaneJoinConfig) []yip.Stage {
 	return getReconfigureStage(config.ExtraNodeKubeAPIServerArgs, config.ExtraNodeKubeControllerManagerArgs,
-		config.ExtraNodeKubeSchedulerArgs, config.ExtraNodeKubeProxyArgs, config.ExtraNodeKubeletArgs)
+		config.ExtraNodeKubeSchedulerArgs, config.ExtraNodeKubeProxyArgs, config.ExtraNodeKubeletArgs,
+		config.ExtraNodeEtcdArgs)
 }
 
-func getReconfigureStage(apiserver, controller, scheduler, kubeProxy, kubelet map[string]*string) []yip.Stage {
+func getReconfigureStage(apiserver, controller, scheduler, kubeProxy, kubelet, etcd map[string]*string) []yip.Stage {
 	return []yip.Stage{
-		getReconfigureFileStage(apiserver, controller, scheduler, kubeProxy, kubelet),
-		getReconfigureServiceRestartStage(),
+		getReconfigureFileStage(apiserver, controller, scheduler, kubeProxy, kubelet, etcd),
+		getReconfigureServiceRestartStage(etcd),
 	}
 }
 
-func getReconfigureFileStage(apiserver, controller, scheduler, kubeProxy, kubelet map[string]*string) yip.Stage {
-	return yip.Stage{
-		Name: "Regenerate Kube Components Args Files",
-		Files: []yip.File{
-			{
-				Path:        filepath.Join(domain.KubeComponentsArgsPath, "kube-apiserver"),
-				Permissions: 0600,
-				Content:     getApiserverArgs(apiserver),
-			},
-			{
-				Path:        filepath.Join(domain.KubeComponentsArgsPath, "kube-controller-manager"),
-				Permissions: 0600,
-				Content:     getKubeControllerArgs(controller),
-			},
-			{
-				Path:        filepath.Join(domain.KubeComponentsArgsPath, "kube-scheduler"),
-				Permissions: 0600,
-				Content:     getKubeSchedulerArgs(scheduler),
-			},
-			{
-				Path:        filepath.Join(domain.KubeComponentsArgsPath, "kube-proxy"),
-				Permissions: 0600,
-				Content:     getKubeProxyArgs(kubeProxy),
-			},
-			{
-				Path:        filepath.Join(domain.KubeComponentsArgsPath, "kubelet"),
-				Permissions: 0600,
-				Content:     getKubeletArgs(kubelet),
-			},
+func getReconfigureFileStage(apiserver, controller, scheduler, kubeProxy, kubelet, etcd map[string]*string) yip.Stage {
+	files := []yip.File{
+		{
+			Path:        filepath.Join(domain.KubeComponentsArgsPath, "kube-apiserver"),
+			Permissions: 0600,
+			Content:     getApiserverArgs(apiserver),
 		},
+		{
+			Path:        filepath.Join(domain.KubeComponentsArgsPath, "kube-controller-manager"),
+			Permissions: 0600,
+			Content:     getKubeControllerArgs(controller),
+		},
+		{
+			Path:        filepath.Join(domain.KubeComponentsArgsPath, "kube-scheduler"),
+			Permissions: 0600,
+			Content:     getKubeSchedulerArgs(scheduler),
+		},
+		{
+			Path:        filepath.Join(domain.KubeComponentsArgsPath, "kube-proxy"),
+			Permissions: 0600,
+			Content:     getKubeProxyArgs(kubeProxy),
+		},
+		{
+			Path:        filepath.Join(domain.KubeComponentsArgsPath, "kubelet"),
+			Permissions: 0600,
+			Content:     getKubeletArgs(kubelet),
+		},
+	}
+
+	// etcd is opt-in: only rewrite its args file when the user actually set
+	// extra-node-etcd-args, so existing clusters that don't use the feature
+	// see no etcd churn on a provider-canonical upgrade (etcd is the datastore).
+	if len(etcd) > 0 {
+		files = append(files, yip.File{
+			Path:        filepath.Join(domain.KubeComponentsArgsPath, "etcd"),
+			Permissions: 0600,
+			Content:     getEtcdArgs(etcd),
+		})
+	}
+
+	return yip.Stage{
+		Name:  "Regenerate Kube Components Args Files",
+		Files: files,
 	}
 }
 
-func getReconfigureServiceRestartStage() yip.Stage {
+func getReconfigureServiceRestartStage(etcd map[string]*string) yip.Stage {
+	commands := []string{
+		"systemctl daemon-reload",
+	}
+
+	// Restart etcd first (before the kube components depend on it) and only
+	// when etcd args were supplied — see getReconfigureFileStage.
+	if len(etcd) > 0 {
+		commands = append(commands, "systemctl restart snap.k8s.etcd.service")
+	}
+
+	commands = append(commands,
+		"systemctl restart snap.k8s.containerd.service",
+		"systemctl restart snap.k8s.kube-apiserver.service",
+		"systemctl restart snap.k8s.kube-controller-manager.service",
+		"systemctl restart snap.k8s.kube-scheduler.service",
+		"systemctl restart snap.k8s.kube-proxy.service",
+		"systemctl restart snap.k8s.kubelet.service",
+	)
+
 	return yip.Stage{
-		Name: "Restart Kube Components Services",
-		Commands: []string{
-			"systemctl daemon-reload",
-			"systemctl restart snap.k8s.containerd.service",
-			"systemctl restart snap.k8s.kube-apiserver.service",
-			"systemctl restart snap.k8s.kube-controller-manager.service",
-			"systemctl restart snap.k8s.kube-scheduler.service",
-			"systemctl restart snap.k8s.kube-proxy.service",
-			"systemctl restart snap.k8s.kubelet.service",
-		},
+		Name:     "Restart Kube Components Services",
+		Commands: commands,
 	}
 }
 
@@ -238,6 +264,10 @@ func getKubeProxyArgs(updatedArgs map[string]*string) string {
 
 func getKubeletArgs(updatedArgs map[string]*string) string {
 	return getArgs(updatedArgs, "kubelet")
+}
+
+func getEtcdArgs(updatedArgs map[string]*string) string {
+	return getArgs(updatedArgs, "etcd")
 }
 
 func getArgs(updatedArgs map[string]*string, serviceName string) string {

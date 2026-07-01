@@ -266,6 +266,144 @@ func TestGetArgs(t *testing.T) {
 	})
 }
 
+func TestGetEtcdArgs(t *testing.T) {
+	g := NewWithT(t)
+
+	t.Run("merges new etcd args over the existing args file", func(t *testing.T) {
+		fileContent := `--advertise-client-urls=https://10.10.132.153:2379
+--data-dir=/var/snap/k8s/common/var/lib/etcd/data`
+
+		testFS, cleanup, err := vfst.NewTestFS(map[string]interface{}{
+			filepath.Join(domain.KubeComponentsArgsPath, "etcd"): fileContent,
+		})
+		g.Expect(err).NotTo(HaveOccurred())
+		defer cleanup()
+
+		originalFS := fs.OSFS
+		fs.OSFS = testFS
+		defer func() { fs.OSFS = originalFS }()
+
+		metricsURL := "http://0.0.0.0:2381"
+		updatedArgs := map[string]*string{
+			"--listen-metrics-urls": &metricsURL,
+		}
+
+		result := getEtcdArgs(updatedArgs)
+		expectedLines := []string{
+			"--advertise-client-urls=https://10.10.132.153:2379",
+			"--data-dir=/var/snap/k8s/common/var/lib/etcd/data",
+			"--listen-metrics-urls=http://0.0.0.0:2381",
+		}
+
+		resultLines := strings.Split(result, "\n")
+		sort.Strings(resultLines)
+		sort.Strings(expectedLines)
+
+		g.Expect(resultLines).To(Equal(expectedLines))
+	})
+}
+
+func TestGetReconfigureServiceRestartStage(t *testing.T) {
+	g := NewWithT(t)
+
+	t.Run("restarts etcd before the other kube components when etcd args are set", func(t *testing.T) {
+		metricsURL := "http://0.0.0.0:2381"
+		etcd := map[string]*string{"--listen-metrics-urls": &metricsURL}
+
+		stage := getReconfigureServiceRestartStage(etcd)
+
+		g.Expect(stage.Commands).To(ContainElement("systemctl restart snap.k8s.etcd.service"))
+
+		etcdIdx := indexOf(stage.Commands, "systemctl restart snap.k8s.etcd.service")
+		apiserverIdx := indexOf(stage.Commands, "systemctl restart snap.k8s.kube-apiserver.service")
+		g.Expect(etcdIdx).To(BeNumerically(">=", 0))
+		g.Expect(apiserverIdx).To(BeNumerically(">", etcdIdx),
+			"etcd must restart before kube-apiserver to preserve the datastore during reconfigure")
+	})
+
+	t.Run("does not restart etcd when no etcd args are set (opt-in)", func(t *testing.T) {
+		stage := getReconfigureServiceRestartStage(nil)
+
+		g.Expect(stage.Commands).NotTo(ContainElement("systemctl restart snap.k8s.etcd.service"))
+		// the kube components are still restarted unconditionally
+		g.Expect(stage.Commands).To(ContainElement("systemctl restart snap.k8s.kube-apiserver.service"))
+	})
+}
+
+func TestGetReconfigureFileStage(t *testing.T) {
+	g := NewWithT(t)
+
+	etcdPath := filepath.Join(domain.KubeComponentsArgsPath, "etcd")
+
+	// getArgs reads each component's existing args file, so seed all of them.
+	// (readServiceArgsFile logrus.Fatals on a missing file.)
+	seedArgsFiles := func(includeEtcd bool) map[string]interface{} {
+		files := map[string]interface{}{
+			filepath.Join(domain.KubeComponentsArgsPath, "kube-apiserver"):          "",
+			filepath.Join(domain.KubeComponentsArgsPath, "kube-controller-manager"): "",
+			filepath.Join(domain.KubeComponentsArgsPath, "kube-scheduler"):          "",
+			filepath.Join(domain.KubeComponentsArgsPath, "kube-proxy"):              "",
+			filepath.Join(domain.KubeComponentsArgsPath, "kubelet"):                 "",
+		}
+		if includeEtcd {
+			files[etcdPath] = "--data-dir=/var/snap/k8s/common/var/lib/etcd/data"
+		}
+		return files
+	}
+
+	t.Run("omits the etcd args file when no etcd args are set (opt-in)", func(t *testing.T) {
+		testFS, cleanup, err := vfst.NewTestFS(seedArgsFiles(false))
+		g.Expect(err).NotTo(HaveOccurred())
+		defer cleanup()
+
+		originalFS := fs.OSFS
+		fs.OSFS = testFS
+		defer func() { fs.OSFS = originalFS }()
+
+		stage := getReconfigureFileStage(nil, nil, nil, nil, nil, nil)
+
+		for _, f := range stage.Files {
+			g.Expect(f.Path).NotTo(Equal(etcdPath), "etcd args file must not be written when feature is unused")
+		}
+		// the five kube component files are always present
+		g.Expect(stage.Files).To(HaveLen(5))
+	})
+
+	t.Run("writes the etcd args file when etcd args are set", func(t *testing.T) {
+		testFS, cleanup, err := vfst.NewTestFS(seedArgsFiles(true))
+		g.Expect(err).NotTo(HaveOccurred())
+		defer cleanup()
+
+		originalFS := fs.OSFS
+		fs.OSFS = testFS
+		defer func() { fs.OSFS = originalFS }()
+
+		metricsURL := "http://0.0.0.0:2381"
+		etcd := map[string]*string{"--listen-metrics-urls": &metricsURL}
+
+		stage := getReconfigureFileStage(nil, nil, nil, nil, nil, etcd)
+
+		g.Expect(stage.Files).To(HaveLen(6))
+		etcdIdx := -1
+		for i, f := range stage.Files {
+			if f.Path == etcdPath {
+				etcdIdx = i
+			}
+		}
+		g.Expect(etcdIdx).To(BeNumerically(">=", 0), "etcd args file must be written when feature is configured")
+		g.Expect(stage.Files[etcdIdx].Content).To(ContainSubstring("--listen-metrics-urls=http://0.0.0.0:2381"))
+	})
+}
+
+func indexOf(haystack []string, needle string) int {
+	for i, s := range haystack {
+		if s == needle {
+			return i
+		}
+	}
+	return -1
+}
+
 func TestContainsAnyNonMatch(t *testing.T) {
 	g := NewWithT(t)
 
