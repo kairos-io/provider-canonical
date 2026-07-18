@@ -79,7 +79,7 @@ build-provider-package:
     ARG TARGETARCH
     ARG VERSION=$(cat VERSION)
     FROM scratch
-    COPY +build-provider/agent-provider-canonical /system/providers/agent-provider-canonical
+    COPY +build-provider/agent-provider-canonical /usr/local/system/providers/agent-provider-canonical
     COPY scripts/ /opt/canonical/scripts/
     SAVE IMAGE --push $IMAGE_REPOSITORY/provider-canonical:${VERSION}-${TARGETARCH}
 

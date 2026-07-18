@@ -27,6 +27,23 @@ with_retry() {
   log "${desc} succeeded"
 }
 
+# -------- Revision helpers --------
+# Read a .revision file, checking /opt/canonical/revision/ first,
+# then falling back to /opt/canonical/ for older deployments.
+read_revision() {
+  local name="$1"
+  local new_path="/opt/canonical/revision/${name}.revision"
+  local old_path="/opt/canonical/${name}.revision"
+  if [[ -f "$new_path" ]]; then
+    cat "$new_path"
+  elif [[ -f "$old_path" ]]; then
+    cat "$old_path"
+  else
+    log "revision file for '${name}' not found (checked ${new_path} and ${old_path})"
+    return 1
+  fi
+}
+
 # -------- Snap helpers --------
 snap_is_busy() {
   # Skip "Initialize device" which hangs in airgap (tries to contact api.snapcraft.io)
@@ -43,7 +60,7 @@ wait_for_snap_idle() {
 # Install snapd snap
 install_snapd() {
   local revision
-  revision=$(cat /opt/canonical/snapd.revision)
+  revision=$(read_revision snapd)
   local assert_file="snapd_${revision}.assert"
   local snap_file="./snapd_${revision}.snap"
 
@@ -60,7 +77,7 @@ install_snapd() {
 # Install core snap (uses wildcard for core20/core22/core24)
 install_core() {
   local revision
-  revision=$(cat /opt/canonical/core.revision)
+  revision=$(read_revision core)
 
   shopt -s nullglob
   local assert_files=( core*_"${revision}".assert )
@@ -80,7 +97,7 @@ install_core() {
 # Install k8s snap
 install_k8s() {
   local revision
-  revision=$(cat /opt/canonical/k8s.revision)
+  revision=$(read_revision k8s)
   local assert_file="k8s_${revision}.assert"
   local snap_file="./k8s_${revision}.snap"
 
